@@ -99,19 +99,51 @@ function App() {
 
 // ----- DASHBOARD -----
 function Dashboard() {
+  // Use state for dashboard stats (simulate update every 5s)
+  const [stats, setStats] = React.useState({
+    inside: 312,
+    outside: 89,
+    peakTime: "15:35",
+    suspicious: 2,
+    lastUpdate: new Date().toLocaleTimeString()
+  });
+
+  React.useEffect(() => {
+    // Simulate automatic dashboard data update every 5 seconds
+    const interval = setInterval(() => {
+      setStats(prev => {
+        // For demo purposes, randomize data slightly
+        const insideRand = Math.max(0, prev.inside + (Math.random() > 0.5 ? 1 : -1) * Math.floor(Math.random() * 5));
+        const outsideRand = Math.max(0, prev.outside + (Math.random() > 0.5 ? 1 : -1) * Math.floor(Math.random() * 3));
+        const suspiciousRand = Math.max(0, prev.suspicious + (Math.random() > 0.8 ? 1 : 0) - (Math.random() > 0.7 ? 1 : 0));
+        return {
+          inside: insideRand,
+          outside: outsideRand,
+          peakTime: prev.peakTime,
+          suspicious: suspiciousRand,
+          lastUpdate: new Date().toLocaleTimeString(),
+        };
+      });
+    }, 5000);
+    return () => clearInterval(interval);
+  }, []);
+
   return (
     <div>
       <h1 style={mainTitleStyle}>Event Dashboard</h1>
+      <div style={{ fontSize: 13, color: "#888", marginBottom: 2 }}>
+        Last updated: <span style={{ color: "#1A237E", fontWeight: 600 }}>{stats.lastUpdate}</span>
+      </div>
       <div className="dashboard-grid" style={{
         display: 'grid',
         gridTemplateColumns: 'repeat(2, 1fr)',
         gap: 32,
         margin: '32px 0'
       }}>
-        <StatCard title="Attendees Inside" value="312" icon="🟢" color="#1A237E" />
-        <StatCard title="Attendees Outside" value="89" icon="🔵" color="#FF6F00" />
-        <StatCard title="Peak Time" value="15:35" icon="⏰" color="#E87A41" />
-        <StatCard title="Suspicious Scans" value="2" icon="⚠️" color="#C62828" />
+        <StatCard title="Attendees Inside" value={stats.inside} icon="🟢" color="#1A237E" textColor="#1A237E" />
+        <StatCard title="Attendees Outside" value={stats.outside} icon="🔵" color="#FF6F00" textColor="#FF6F00" />
+        <StatCard title="Peak Time" value={stats.peakTime} icon="⏰" color="#E87A41" textColor="#E87A41" />
+        <StatCard title="Suspicious Scans" value={stats.suspicious} icon="⚠️" color="#C62828" textColor="#C62828" />
       </div>
       <div style={{ marginTop: 32, display: 'flex', gap: 40, flexWrap: 'wrap' }}>
         <FlowGraph />
@@ -368,7 +400,29 @@ function Settings() {
 }
 
 // ----- UI ATOMS -----
-function StatCard({ icon, color, title, value }) {
+function StatCard({ icon, color, title, value, textColor }) {
+  // Use a dark color when supplied color is light
+  function getContrastColor(hex) {
+    // fallback for non-hex inputs
+    if (!hex || typeof hex !== 'string') return "#1A237E";
+    let c = hex.replace("#", "");
+    if (c.length === 3) c = c.split("").map(x => x + x).join("");
+    const rgb = parseInt(c, 16);
+    const r = (rgb >> 16) & 0xff, g = (rgb >> 8) & 0xff, b = rgb & 0xff;
+    // Luminance formula
+    const luminance = 0.299 * r + 0.587 * g + 0.114 * b;
+    return luminance > 180 ? "#222" : "#fff";
+  }
+
+  // If textColor provided, use it for number, choose correct contrasting color for value background
+  const valueStyle = {
+    fontSize: 26,
+    fontWeight: 700,
+    color: textColor || getContrastColor(color),
+    marginTop: 6,
+    textShadow: "0 1px 2px rgb(0 0 0 / 8%)"
+  };
+
   return (
     <div style={{
       background: "#fff",
@@ -384,7 +438,7 @@ function StatCard({ icon, color, title, value }) {
       marginBottom: 6
     }}>
       <span style={{ fontSize: 32 }}>{icon}</span>
-      <span style={{ fontSize: 26, fontWeight: 700, color: color, marginTop: 6 }}>{value}</span>
+      <span style={valueStyle}>{value}</span>
       <span style={{ color: "#222", fontWeight: 500, marginTop: 4 }}>{title}</span>
     </div>
   );
