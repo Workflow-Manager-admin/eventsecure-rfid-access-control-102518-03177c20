@@ -197,31 +197,154 @@ function RFIDScan() {
   );
 }
 
-// ----- USER MANAGEMENT -----
+/**
+ * ----- USER MANAGEMENT -----
+ * Reworked: stateful participants list, add/import users, edit, assign RFID, and search functions.
+ * Mock backend logic used. No server needed.
+ */
 function UserManagement() {
-  // Demo table of users for participant management
+  // Participants state
+  const [participants, setParticipants] = React.useState([
+    {
+      id: 102843,
+      name: "Ashley Smith",
+      rfid: "RF1ACD97",
+      status: "IN",
+      lastIn: "15:41",
+      zone: "North Gate"
+    },
+    {
+      id: 105992,
+      name: "Li Wang",
+      rfid: "RF695EC7",
+      status: "OUT",
+      lastIn: "13:07",
+      zone: "South Gate"
+    },
+    {
+      id: 104543,
+      name: "Harjit Patel",
+      rfid: "RFAAE812",
+      status: "Suspicious",
+      lastIn: "15:43",
+      zone: "East Gate"
+    }
+  ]);
+  // Modal states
+  const [showAddModal, setShowAddModal] = React.useState(false);
+  const [showImportModal, setShowImportModal] = React.useState(false);
+  const [editParticipant, setEditParticipant] = React.useState(null);
+  const [searchTerm, setSearchTerm] = React.useState("");
+
+  // Filtering
+  const filtered = participants.filter(p =>
+    p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    p.rfid.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    `${p.id}`.includes(searchTerm)
+  );
+
+  // Add User (mock API)
+  function handleAddUser(user) {
+    setParticipants(prev => [
+      ...prev,
+      {
+        id: Date.now(), // mock unique ID
+        ...user,
+        lastIn: "--:--",
+        status: "OUT",
+        zone: user.zone || ""
+      }
+    ]);
+    setShowAddModal(false);
+  }
+
+  // Import Users from CSV (mock: parse CSV string and add entries)
+  function handleImport(csvText) {
+    // CSV should have: name,rfid,zone
+    const rows = csvText.trim().split("\n");
+    const newUsers = rows.map(row => {
+      const [name, rfid, zone] = row.split(",");
+      return {
+        name: name?.trim() || "",
+        rfid: rfid?.trim() || "",
+        zone: zone?.trim() || "",
+        id: Date.now() + Math.floor(Math.random()*100000),
+        lastIn: "--:--",
+        status: "OUT"
+      };
+    });
+    setParticipants(prev => [...prev, ...newUsers]);
+    setShowImportModal(false);
+  }
+
+  // Assign RFID (when editing)
+  function handleAssignRFID(participantId, newRFID) {
+    setParticipants(prev =>
+      prev.map(p =>
+        p.id === participantId ? { ...p, rfid: newRFID } : p
+      )
+    );
+    setEditParticipant(null);
+  }
+
+  // Edit user details (simply replaces user details)
+  function handleSaveEdit(participantId, updatedUser) {
+    setParticipants(prev =>
+      prev.map(p =>
+        p.id === participantId ? { ...p, ...updatedUser } : p
+      )
+    );
+    setEditParticipant(null);
+  }
+
+  // Search input handler
+  function handleSearch(e) {
+    setSearchTerm(e.target.value);
+  }
+
+  // UI
   return (
     <div>
       <h2 style={sectionTitleStyle}>Participant Management</h2>
-      <div style={{
-        background: '#fff', padding: 22, borderRadius: 10, boxShadow: "0 2px 8px #E3E3E355",
-        marginBottom: 16, maxWidth: 780
-      }}>
+      <div
+        style={{
+          background: "#fff",
+          padding: 22,
+          borderRadius: 10,
+          boxShadow: "0 2px 8px #E3E3E355",
+          marginBottom: 16,
+          maxWidth: 780
+        }}
+      >
         <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 12 }}>
           <div>
-            <button className="btn" style={{ background: "#FF6F00", color: "#fff", marginRight: 4 }}>+ Add User</button>
-            <button className="btn" style={{ background: "#E87A41", color: "#fff" }}>Import CSV</button>
+            <button
+              className="btn"
+              style={{ background: "#FF6F00", color: "#fff", marginRight: 4 }}
+              onClick={() => setShowAddModal(true)}
+            >
+              + Add User
+            </button>
+            <button
+              className="btn"
+              style={{ background: "#E87A41", color: "#fff" }}
+              onClick={() => setShowImportModal(true)}
+            >
+              Import CSV
+            </button>
           </div>
           <div>
             <input
               style={{ border: "1px solid #e0e0e0", padding: "8px 10px", borderRadius: 5, fontSize: 14 }}
               placeholder="Search users..."
+              value={searchTerm}
+              onChange={handleSearch}
             />
           </div>
         </div>
         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 15 }}>
           <thead>
-            <tr style={{ background: '#e3e3e3' }}>
+            <tr style={{ background: "#e3e3e3" }}>
               <th>ID</th>
               <th>Name</th>
               <th>RFID</th>
@@ -232,40 +355,293 @@ function UserManagement() {
             </tr>
           </thead>
           <tbody>
-            <tr>
-              <td>102843</td>
-              <td>Ashley Smith</td>
-              <td>RF1ACD97</td>
-              <td style={{ color: "#238B36", fontWeight: 500 }}>IN</td>
-              <td>15:41</td>
-              <td>North Gate</td>
-              <td><button className="btn" style={{ fontSize: 12, padding: "6px 12px" }}>Edit</button></td>
-            </tr>
-            <tr>
-              <td>105992</td>
-              <td>Li Wang</td>
-              <td>RF695EC7</td>
-              <td style={{ color: "#C62828", fontWeight: 500 }}>OUT</td>
-              <td>13:07</td>
-              <td>South Gate</td>
-              <td><button className="btn" style={{ fontSize: 12, padding: "6px 12px" }}>Edit</button></td>
-            </tr>
-            <tr style={{ backgroundColor: "#fff7e0" }}>
-              <td>104543</td>
-              <td>Harjit Patel</td>
-              <td>RFAAE812</td>
-              <td style={{ color: "#FF6F00", fontWeight: 500 }}>Suspicious</td>
-              <td>15:43</td>
-              <td>East Gate</td>
-              <td><button className="btn" style={{ fontSize: 12, padding: "6px 12px" }}>Review</button></td>
-            </tr>
+            {filtered.map(participant => (
+              <tr
+                key={participant.id}
+                style={
+                  participant.status === "Suspicious"
+                    ? { backgroundColor: "#fff7e0" }
+                    : undefined
+                }
+              >
+                <td>{participant.id}</td>
+                <td>{participant.name}</td>
+                <td>
+                  {participant.rfid}
+                  <button
+                    className="btn"
+                    style={{
+                      fontSize: 12,
+                      padding: "3px 8px",
+                      marginLeft: 6,
+                      background: "#1A237E",
+                      color: "#fff"
+                    }}
+                    onClick={() =>
+                      setEditParticipant({ ...participant, mode: "rfid" })
+                    }
+                  >
+                    Assign
+                  </button>
+                </td>
+                <td
+                  style={
+                    participant.status === "IN"
+                      ? { color: "#238B36", fontWeight: 500 }
+                      : participant.status === "OUT"
+                      ? { color: "#C62828", fontWeight: 500 }
+                      : { color: "#FF6F00", fontWeight: 500 }
+                  }
+                >
+                  {participant.status}
+                </td>
+                <td>{participant.lastIn}</td>
+                <td>{participant.zone}</td>
+                <td>
+                  <button
+                    className="btn"
+                    style={{ fontSize: 12, padding: "6px 12px" }}
+                    onClick={() =>
+                      setEditParticipant({ ...participant, mode: "edit" })
+                    }
+                  >
+                    {participant.status === "Suspicious" ? "Review" : "Edit"}
+                  </button>
+                </td>
+              </tr>
+            ))}
+            {filtered.length === 0 && (
+              <tr>
+                <td colSpan={7} style={{ color: "#888", textAlign: "center" }}>
+                  No users found.
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>
-      <p style={{ color: "#777", fontSize: 13 }}>Admins can add/import participants, assign RFID codes, and review analytics.</p>
+      <p style={{ color: "#777", fontSize: 13 }}>
+        Admins can add/import participants, assign RFID codes, and review analytics.
+      </p>
+
+      {/* Modal for adding user */}
+      {showAddModal && (
+        <UserModal
+          title="Add User"
+          buttonText="Add"
+          onSave={handleAddUser}
+          onClose={() => setShowAddModal(false)}
+        />
+      )}
+      {/* Modal for importing CSV */}
+      {showImportModal && (
+        <ImportCSVModal
+          onImport={handleImport}
+          onClose={() => setShowImportModal(false)}
+        />
+      )}
+      {/* Modal for editing or assigning RFID */}
+      {editParticipant && editParticipant.mode === "edit" && (
+        <UserModal
+          title="Edit User"
+          buttonText="Save"
+          defaultValues={{
+            name: editParticipant.name,
+            rfid: editParticipant.rfid,
+            zone: editParticipant.zone
+          }}
+          onSave={user => handleSaveEdit(editParticipant.id, user)}
+          onClose={() => setEditParticipant(null)}
+        />
+      )}
+      {editParticipant && editParticipant.mode === "rfid" && (
+        <AssignRFIDModal
+          rfid={editParticipant.rfid}
+          onSave={newRFID =>
+            handleAssignRFID(editParticipant.id, newRFID)
+          }
+          onClose={() => setEditParticipant(null)}
+        />
+      )}
     </div>
   );
 }
+
+/**
+ * User Modal (Add/Edit): For user entry
+ * @param {*} param0
+ * @returns
+ */
+function UserModal({
+  title,
+  buttonText,
+  onSave,
+  onClose,
+  defaultValues = { name: "", rfid: "", zone: "" },
+}) {
+  const [name, setName] = React.useState(defaultValues.name);
+  const [rfid, setRFID] = React.useState(defaultValues.rfid);
+  const [zone, setZone] = React.useState(defaultValues.zone);
+
+  function handleSubmit(e) {
+    e.preventDefault();
+    if (!name || !rfid) return;
+    onSave({ name, rfid, zone });
+  }
+
+  return (
+    <div style={modalOverlayStyle}>
+      <div style={modalStyle}>
+        <h3>{title}</h3>
+        <form onSubmit={handleSubmit}>
+          <div style={{ marginBottom: 10 }}>
+            <label>Name:</label>
+            <input
+              style={modalInputStyle}
+              value={name}
+              autoFocus
+              required
+              onChange={e => setName(e.target.value)}
+            />
+          </div>
+          <div style={{ marginBottom: 10 }}>
+            <label>RFID:</label>
+            <input
+              style={modalInputStyle}
+              value={rfid}
+              required
+              onChange={e => setRFID(e.target.value)}
+            />
+          </div>
+          <div style={{ marginBottom: 18 }}>
+            <label>Zone:</label>
+            <input
+              style={modalInputStyle}
+              value={zone}
+              onChange={e => setZone(e.target.value)}
+            />
+          </div>
+          <div style={{ display: "flex", gap: 8 }}>
+            <button className="btn" type="submit" style={{ background: "#1A237E", color: "#fff" }}>
+              {buttonText}
+            </button>
+            <button className="btn" type="button" style={{ background: "#E3E3E3", color: "#333" }} onClick={onClose}>
+              Cancel
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Import CSV Modal: Paste CSV as text for mock import
+ */
+function ImportCSVModal({ onImport, onClose }) {
+  const [csv, setCSV] = React.useState("");
+  function submitCSV(e) {
+    e.preventDefault();
+    if (csv.trim()) {
+      onImport(csv);
+    }
+  }
+  return (
+    <div style={modalOverlayStyle}>
+      <div style={modalStyle}>
+        <h3>Import Users From CSV</h3>
+        <p style={{ fontSize: 13, color: "#888" }}>
+          Paste CSV (name,rfid,zone) - one user per line
+        </p>
+        <form onSubmit={submitCSV}>
+          <textarea
+            value={csv}
+            onChange={e => setCSV(e.target.value)}
+            placeholder={"e.g.\nAlex Young,RF000123,North Gate"}
+            rows={5}
+            style={{ width: "100%", border: "1px solid #e0e0e0", borderRadius: 5, marginBottom: 14, fontSize: 15, padding: 6, fontFamily: "inherit" }}
+            required
+          />
+          <div style={{ display: "flex", gap: 8 }}>
+            <button className="btn" type="submit" style={{ background: "#E87A41", color: "#fff" }}>
+              Import
+            </button>
+            <button className="btn" type="button" style={{ background: "#E3E3E3", color: "#333" }} onClick={onClose}>
+              Cancel
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Assign RFID Modal
+ */
+function AssignRFIDModal({ rfid, onSave, onClose }) {
+  const [newRFID, setNewRFID] = React.useState(rfid || "");
+  function handleSave(e) {
+    e.preventDefault();
+    if (!newRFID) return;
+    onSave(newRFID);
+  }
+  return (
+    <div style={modalOverlayStyle}>
+      <div style={modalStyle}>
+        <h3>Assign RFID</h3>
+        <form onSubmit={handleSave}>
+          <input
+            style={modalInputStyle}
+            value={newRFID}
+            onChange={e => setNewRFID(e.target.value)}
+            required
+            autoFocus
+            maxLength={16}
+          />
+          <div style={{ marginTop: 16, display: "flex", gap: 8 }}>
+            <button className="btn" type="submit" style={{ background: "#1A237E", color: "#fff" }}>
+              Save
+            </button>
+            <button className="btn" type="button" style={{ background: "#E3E3E3", color: "#333" }} onClick={onClose}>
+              Cancel
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+// ----- Modal UI Styles -----
+const modalOverlayStyle = {
+  position: "fixed",
+  background: "rgba(0,0,0,0.25)",
+  top: 0,
+  left: 0,
+  width: "100vw",
+  height: "100vh",
+  zIndex: 99,
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center"
+};
+const modalStyle = {
+  background: "#fff",
+  borderRadius: 15,
+  padding: 28,
+  minWidth: 310,
+  maxWidth: 340,
+  boxShadow: "0 6px 28px #0003"
+};
+const modalInputStyle = {
+  width: "100%",
+  border: "1px solid #e0e0e0",
+  borderRadius: 6,
+  padding: 7,
+  marginTop: 4,
+  fontSize: 15
+};
 
 // ----- LOG REVIEW -----
 function LogReview() {
